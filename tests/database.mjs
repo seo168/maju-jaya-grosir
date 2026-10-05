@@ -1,0 +1,37 @@
+// Run with PGLITE_MODULE pointing to an installed @electric-sql/pglite module.
+import {readFile} from 'node:fs/promises';
+import assert from 'node:assert/strict';
+const {PGlite}=await import(process.env.PGLITE_MODULE||'@electric-sql/pglite');
+const pg=new PGlite();
+await pg.exec(`create role anon;create role authenticated;create schema auth;
+create table auth.users(id uuid primary key);
+create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+grant usage on schema public,auth to anon,authenticated;grant execute on function auth.uid() to anon,authenticated;`);
+await pg.exec(await readFile(new URL('../supabase/schema.sql',import.meta.url),'utf8'));
+const u1='00000000-0000-4000-8000-000000000001',u2='00000000-0000-4000-8000-000000000002',u3='00000000-0000-4000-8000-000000000003';
+await pg.exec(`insert into auth.users values('${u1}'),('${u2}'),('${u3}');insert into public.approved_accounts(user_id) values('${u1}'),('${u2}');`);
+async function asUser(id,sql){await pg.exec(`reset role;set role authenticated;select set_config('request.jwt.claim.sub','${id}',false);`);return pg.query(sql)}
+const c='00000000-0000-4000-8000-000000000010',d='00000000-0000-4000-8000-000000000020';
+await asUser(u1,`insert into customers(id,name,city,payment_type,term_days,credit_limit) values('${c}','Test','Test','credit',30,1000)`);
+await asUser(u1,`insert into debts(id,customer_id,amount,date,due_date) values('${d}','${c}',1000,current_date,current_date)`);
+assert.equal((await asUser(u1,'select * from customers')).rows.length,1);
+assert.equal((await asUser(u2,'select * from customers')).rows.length,0);
+assert.equal((await asUser(u3,'select public.is_approved_account() as approved')).rows[0].approved,false);
+await assert.rejects(asUser(u3,`insert into customers(name,city,payment_type,term_days,credit_limit) values('No','Test','credit',30,100)`));
+await assert.rejects(asUser(u2,`insert into payments(debt_id,amount,date,method) values('${d}',1,current_date,'Tunai')`));
+await assert.rejects(asUser(u1,`insert into debts(customer_id,amount,date,due_date) values('${c}',1,current_date,current_date)`));
+await asUser(u1,`insert into payments(debt_id,amount,date,method) values('${d}',400,current_date,'Tunai')`);
+await assert.rejects(asUser(u1,`insert into payments(debt_id,amount,date,method) values('${d}',601,current_date,'Tunai')`));
+await assert.rejects(asUser(u1,`update customers set credit_limit=599 where id='${c}'`));
+await asUser(u1,`insert into payments(debt_id,amount,date,method) values('${d}',600,current_date,'Tunai')`);
+await assert.rejects(asUser(u1,`update payments set amount=1`));
+await assert.rejects(asUser(u1,`delete from customers`));
+await assert.rejects(asUser(u1,`insert into approved_accounts(user_id) values('${u3}')`));
+await pg.exec('reset role;set role anon;');await assert.rejects(pg.query('select * from customers'));
+const order='00000000-0000-4000-8000-000000000030';
+await asUser(u1,`insert into orders(id,destination_address,recipient_name,recipient_phone,delivery_code,shipping_date,estimated_arrival,driver_name,driver_phone,vehicle_number) values('${order}','Test','Test','0','SJ-Test',current_date,current_date,'Test','0','Test')`);
+await assert.rejects(asUser(u1,`update orders set status='arrived',arrival_date=current_date where id='${order}'`));
+await asUser(u1,`update orders set status='transit' where id='${order}'`);
+await asUser(u1,`update orders set status='arrived',arrival_date=current_date where id='${order}'`);
+assert.equal((await asUser(u1,'select status from orders')).rows[0].status,'arrived');
+await pg.close();console.log('PASS: schema, owner isolation, approval gate, anon rejection, limits, partial payments, immutable ledger, and order transitions.');

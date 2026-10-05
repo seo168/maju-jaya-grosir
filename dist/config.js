@@ -1,2 +1,5 @@
-// Public configuration only. Never put service_role or database passwords here.
-window.MJG_CONFIG = {supabaseUrl: '', supabaseKey: ''};
+// Public configuration only. Authorization is enforced by Supabase RLS.
+window.MJG_CONFIG = {
+  supabaseUrl: 'https://vcgdjapznkwwdrymgqye.supabase.co',
+  supabaseKey: 'sb_publishable_TQaAfmvSnrqqIn9CQDgJCA_GYS3Bjfb'
+};
