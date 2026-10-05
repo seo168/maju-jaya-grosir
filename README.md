@@ -35,3 +35,14 @@ Data dari versi lokal masih ada pada browser/origin lama. Tidak otomatis dikirim
 Jalankan `python3 -m http.server 8768 --directory dist` untuk preview. Konfigurasi Supabase diperlukan agar bisa masuk.
 
 Supabase JS 2.117.2 disertakan di `dist/vendor/` dengan lisensi MIT.
+
+## Lingkungan deployment
+
+- Website: https://seo168.github.io/maju-jaya-grosir/
+- Repository: https://github.com/seo168/maju-jaya-grosir
+- Supabase project: `vcgdjapznkwwdrymgqye` (Singapore)
+- Skema sudah dipasang. Permintaan anonim ke seluruh tabel ditolak (HTTP 401).
+- Pendaftaran umum dan anonymous sign-in dinonaktifkan.
+- `tests/database.mjs` dijalankan dengan PGlite 0.5.8: isolasi pemilik, izin akun, limit utang, pembayaran berlebih, larangan perubahan ledger, dan transisi pengiriman lulus.
+
+Data lama pada browser lokal belum dimigrasikan ke cloud. Data di GitHub hanya kode dan aset, tidak termasuk catatan usaha.
