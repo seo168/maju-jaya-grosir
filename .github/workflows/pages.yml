@@ -22,6 +22,7 @@ jobs:
         with:
           node-version: '24'
       - run: node tests/ledger.cjs
+      - run: node tests/cloud.cjs
       - run: for file in dist/*.js; do node --check "$file"; done
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
