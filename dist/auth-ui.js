@@ -1,0 +1,3 @@
+document.querySelector('#login-form').onsubmit=async event=>{event.preventDefault();const button=document.querySelector('#login-submit');button.disabled=true;document.querySelector('#auth-message').textContent='Memeriksa akun…';try{await cloudStore.login(document.querySelector('#auth-email').value.trim(),document.querySelector('#auth-password').value);document.querySelector('#auth-password').value='';document.querySelector('#auth-message').textContent=''}catch(error){document.querySelector('#auth-message').textContent=error.message}finally{button.disabled=false}};
+document.querySelector('#logout').onclick=()=>cloudStore.logout();
+cloudStore.start();
